@@ -9,8 +9,18 @@ const validateUser = (user) => {
         username : joi.string().min(2).required(),
         email : joi.string().email().required(),
         isAdmin : joi.boolean(),
-        password : joi.string(),
+        password : joi.string().required(),
         profilepic : joi.string()
+    })
+
+    const result = schema.validate(user)
+    return result
+}
+
+const validateLogin = (user) => {
+    const schema = joi.object({
+        username : joi.string().min(2).required(),
+        password : joi.string().required()
     })
 
     const result = schema.validate(user)
@@ -36,6 +46,7 @@ router.post('/register', async (req, res) => {
         const newUser = {
             username : req.body.username,
             email : req.body.email,
+            isAdmin : req.body.isAdmin,
             password : req.body.password,
             profilepic : req.body.profilepic
         }
@@ -53,6 +64,34 @@ router.post('/register', async (req, res) => {
     } catch (err){
         console.error(err.message)
         res.status(500).send("Server Error")
+    }
+})
+
+// Login
+router.post('/login', async (req,res) => {
+    // validate
+    const result = validateLogin(req.body)
+    if (result.error){
+        return res.status(400).json({error: result.error.details[0].message})
+    }
+    try {
+        const { username, password } = req.body;
+        // check if user exists
+        const user = await User.findOne({ username : username })
+        if(!user){
+            return res.send(401).json({error:"User not registered"})
+        }
+        // compare password
+        const isMatch = await bcrypt.compare( password, user.password)
+        if(!isMatch){
+            return res.send(401).json({error:"Invalid credentials"})
+        }
+        // return jwt token
+        const token = user.generateAuthToken();
+        return res.send(token);
+    } catch (err) {
+        console.error(err.message)
+        return res.status(400).send('Server Error')
     }
 })
 
