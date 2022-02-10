@@ -30,4 +30,14 @@ const authOwner = (req,res,next) => {
     });
 }
 
-module.exports = { auth, authOwner }
+const authOwnerOrAdmin = (req,res,next) => {
+    auth (req,res, () => {
+        if(req.user.id === req.params.id || req.user.isAdmin ){
+            next();
+        } else {
+            return res.status(403).json({ msg : "Access denied. You're not the owner"});
+        }
+    });
+}
+
+module.exports = { auth, authOwner, authOwnerOrAdmin }
